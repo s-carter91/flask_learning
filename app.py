@@ -1,20 +1,21 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from datetime import date
+from datetime import date, timedelta
 from flask_marshmallow import Marshmallow
 from flask_bcrypt import Bcrypt
 from sqlalchemy.exc import IntegrityError
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, create_access_token
 
 app = Flask(__name__)
 
 app.config ['JSON_SORT_KEYS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://tello_dev:password123@127.0.0.1:5432/trello'
-app.config['JWT_SECRET_KEY'] = ''
+app.config['JWT_SECRET_KEY'] = 'hello there'
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -133,7 +134,8 @@ def auth_login():
     user = db.session.scalar(stmt)
     # Check users password against email address
     if user and bcrypt.check_password_hash(user.password, request.json['password']):
-        return UserSchema(exclude=['password']).dump(user)
+        token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=1))
+        return {'email': user.email, 'token': token, 'is_admin': user.is_admin}
     else:
         return {'error': 'Invalid email or password'}, 401
 
