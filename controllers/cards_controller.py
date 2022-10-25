@@ -2,6 +2,8 @@ from flask import Blueprint, request
 from init import db
 from datetime import date
 from models.card import Card, CardSchema
+from controllers.auth_controller import authorize
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 
 cards_bp = Blueprint('cards', __name__, url_prefix='/cards')
@@ -23,6 +25,7 @@ def all_cards():
     return CardSchema(many=True).dump(cards)
 
 @cards_bp.route('/<int:id>/', methods=['PUT', 'PATCH'])
+@jwt_required()
 def update_one_card(id):
     stmt = db.select(Card).filter_by(id=id)
     card = db.session.scalar(stmt)
@@ -37,7 +40,10 @@ def update_one_card(id):
         return {'error' : 'Card not fund with id {id}'}, 404
 
 @cards_bp.route('/<int:id>/', methods=['DELETE'])
+@jwt_required()
 def delete_one_card(id):
+    authorize()
+
     stmt = db.select(Card).filter_by(id=id)
     card = db.session.scalar(stmt)
     if card:
@@ -57,6 +63,7 @@ def one_card(id):
         return {'error' : 'Card not fund with id {id}'}, 404
 
 @cards_bp.route('/', methods=['POST'])
+@jwt_required()
 def create_card():
     card= Card(
         title = request.json['title'],
